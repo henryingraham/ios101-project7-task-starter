@@ -5,7 +5,7 @@
 import UIKit
 
 // The Task model
-struct Task {
+struct Task: Codable, Equatable {
 
     // The task's title
     var title: String
@@ -44,33 +44,58 @@ struct Task {
 
     // The date the task was created
     // This property is set as the current date whenever the task is initially created.
-    let createdDate: Date = Date()
+    var createdDate: Date = Date()
 
     // An id (Universal Unique Identifier) used to identify a task.
-    let id: String = UUID().uuidString
+    var id: String = UUID().uuidString
 }
 
 // MARK: - Task + UserDefaults
 extension Task {
 
+    static var tasksKey: String {
+        return "Tasks"
+    }
 
     // Given an array of tasks, encodes them to data and saves to UserDefaults.
     static func save(_ tasks: [Task]) {
-
-        // TODO: Save the array of tasks
+        var defaults = UserDefaults.standard
+        do {
+            var encodedData = try JSONEncoder().encode(tasks)
+            defaults.set(encodedData, forKey: tasksKey)
+        } catch {
+            print("Error saving tasks: \(error)")
+        }
     }
 
     // Retrieve an array of saved tasks from UserDefaults.
     static func getTasks() -> [Task] {
-        
-        // TODO: Get the array of saved tasks from UserDefaults
-
-        return [] // 👈 replace with returned saved tasks
+        var defaults = UserDefaults.standard
+        if var data = defaults.data(forKey: tasksKey) {
+            do {
+                var decodedTasks = try JSONDecoder().decode([Task].self, from: data)
+                return decodedTasks
+            } catch {
+                print("Error retrieving tasks: \(error)")
+            }
+        }
+        return []
     }
 
     // Add a new task or update an existing task with the current task.
     func save() {
-
-        // TODO: Save the current task
+        var savedTasks = Task.getTasks()
+        
+        if let existingTaskIndex = savedTasks.firstIndex(where: { $0.id == self.id }) {
+            // Update the existing task directly
+            savedTasks.remove(at: existingTaskIndex)
+            savedTasks.insert(self, at: existingTaskIndex)
+            Task.save(savedTasks)
+        } else {
+            // If the task doesn't exist, add it to the end of the array
+            savedTasks.append(self)
+            Task.save(savedTasks)
+        }
+    
     }
 }
